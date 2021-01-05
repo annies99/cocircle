@@ -1,0 +1,123 @@
+import wixData from "wix-data";
+import wixUsers from 'wix-users';
+
+$w.onReady(() => {
+  loadContinents();
+
+  // Check if user is logged in
+  if (wixUsers.currentUser.loggedIn) {
+    $w('#ifNotLoggedIn').hide();
+    }
+    else {
+      $w('#ifNotLoggedIn').show();
+    }
+
+  // Check if user has already voted in last 2 weeks
+  $w('#repeater1').onItemReady(($w, itemData) => {
+    
+    /*
+    console.log("onItemReady lastPressedUp:" + itemData.lastpressedUp.getTime());
+    if (itemData.lastPressedUp.getTime() === undefined) {
+      return;
+    }
+    if (itemData.lastPressedDown.getTime() === undefined) {
+      return;
+    }
+    */
+    let currTimeUp = itemData.lastPressedUp.getTime();
+    let currTimeDown = itemData.lastPressedDown.getTime();
+    if (currTimeUp < (currTimeUp + 1209600000)){
+      $w('#upvote').disable();
+      $w('#downvote').disable();
+    } else {
+      $w('#downvote').enable();
+     $w('#downvote').disable();
+    }
+    if (currTimeDown < (currTimeDown + 1209600000)){
+      $w('#upvote').disable();
+      $w('#downvote').disable();
+    } else {
+      $w('#downvote').enable();
+     $w('#downvote').disable();
+    }  });
+});
+
+let lastFilterTitle;
+let lastFilterContinent;
+let debounceTimer;
+export function iTitle_keyPress(event, $w) {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = undefined;
+  }
+  debounceTimer = setTimeout(() => {
+    filter($w('#iTitle').value, lastFilterContinent);  
+  }, 500);
+}
+
+export function iContinent_change(event, $w) {
+	filter(lastFilterTitle, $w('#iContinent').value);
+}
+
+function filter(title, continent) {
+  if (lastFilterTitle !== title || lastFilterContinent !== continent) {
+    let newFilter = wixData.filter();
+    if (title)
+      newFilter = newFilter.contains('articleTitle', title);
+    if (continent)
+      newFilter = newFilter.contains('continent', continent);
+    $w('#dataset1').setFilter(newFilter);		
+    lastFilterTitle = title; 
+    lastFilterContinent = continent;
+  }
+}
+
+function loadContinents() {
+  wixData.query('Articles')
+	  .find()
+	  .then(res => {
+	  	let options = [{"value": '', "label": 'All Schools'}];
+	  	options.push(...res.items.map(school => {
+	  		return {"value": school.continent, "label": school.continent};
+	  	}));
+	  	$w('#iContinent').options = options;
+	  });
+}
+
+export function upvote_click(event, $w) {
+	let itemData = $w('#dataset1').getCurrentItem();
+  let newValue = itemData.score + 1;
+  $w('#dataset1').setFieldValue("lastPressedUp", new Date());
+  $w('#dataset1').setFieldValue("score", newValue);
+  $w('#dataset1').save();
+  $w('#dataset1').refresh();
+  let currTimeUp = itemData.lastPressedUp.getTime();
+  if (currTimeUp < (currTimeUp + 1209600000)){
+    $w('#upvote').disable();
+    $w('#downvote').disable();
+  } else {
+    $w('#downvote').enable();
+    $w('#downvote').disable();
+  }
+  let userId = wixUsers.currentUser.id;
+  let buttonId = event.context.itemId;
+  $w('#dataset2').setFieldValue("userId", userId);
+  $w('#dataset2').setFieldValue("buttonId", buttonId);
+}
+
+export function downvote_click(event, $w) {
+	let itemData = $w('#dataset1').getCurrentItem();
+  let newValue = itemData.score - 1;
+  $w('#dataset1').setFieldValue("lastPressedDown", new Date());
+  $w('#dataset1').setFieldValue("score", newValue);
+  $w('#dataset1').save();
+  $w('#dataset1').refresh();
+  let currTimeDown = itemData.lastPressedDown.getTime();
+  if (currTimeDown < (currTimeDown + 1209600000)){
+    $w('#upvote').disable();
+    $w('#downvote').disable();
+  } else {
+    $w('#downvote').enable();
+    $w('#downvote').disable();
+  }
+}
