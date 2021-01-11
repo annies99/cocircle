@@ -7,40 +7,34 @@ $w.onReady(() => {
   // Check if user is logged in
   if (wixUsers.currentUser.loggedIn) {
     $w('#ifNotLoggedIn').hide();
+    $w('#text8').hide();
     }
     else {
       $w('#ifNotLoggedIn').show();
+      $w('#text8').show();
     }
 
-  // Check if user has already voted in last 2 weeks
-  $w('#repeater1').onItemReady(($w, itemData) => {
-    
-    /*
-    console.log("onItemReady lastPressedUp:" + itemData.lastpressedUp.getTime());
-    if (itemData.lastPressedUp.getTime() === undefined) {
-      return;
-    }
-    if (itemData.lastPressedDown.getTime() === undefined) {
-      return;
-    }
-    */
-    let currTimeUp = itemData.lastPressedUp.getTime();
-    let currTimeDown = itemData.lastPressedDown.getTime();
-    if (currTimeUp < (currTimeUp + 1209600000)){
+  $w('#repeater1').forEachItem( ($w, itemData) => {
+    let userId = wixUsers.currentUser.id;
+    let upButtonId = $w("#upvote").parent.uniqueId;
+    console.log("upButtonId:" + upButtonId);
+
+    let upButtonDate; 
+
+    wixData.query('RatedUsers')
+      .eq("buttonId", upButtonId)
+      .find()
+      .then( (recordedDate) => {
+      upButtonDate = recordedDate;
+    })
+
+    if (!(upButtonDate === undefined) || !(upButtonDate.getTime()) < (upButtonDate.getTime() + 1209600000)) {
       $w('#upvote').disable();
       $w('#downvote').disable();
-    } else {
-      $w('#downvote').enable();
-     $w('#downvote').disable();
     }
-    if (currTimeDown < (currTimeDown + 1209600000)){
-      $w('#upvote').disable();
-      $w('#downvote').disable();
-    } else {
-      $w('#downvote').enable();
-     $w('#downvote').disable();
-    }  });
+  })
 });
+
 
 let lastFilterTitle;
 let lastFilterContinent;
@@ -87,22 +81,58 @@ function loadContinents() {
 export function upvote_click(event, $w) {
 	let itemData = $w('#dataset1').getCurrentItem();
   let newValue = itemData.score + 1;
-  $w('#dataset1').setFieldValue("lastPressedUp", new Date());
   $w('#dataset1').setFieldValue("score", newValue);
   $w('#dataset1').save();
   $w('#dataset1').refresh();
-  let currTimeUp = itemData.lastPressedUp.getTime();
-  if (currTimeUp < (currTimeUp + 1209600000)){
-    $w('#upvote').disable();
-    $w('#downvote').disable();
-  } else {
-    $w('#downvote').enable();
-    $w('#downvote').disable();
-  }
+
+  let currDate = new Date();
+
   let userId = wixUsers.currentUser.id;
   let buttonId = event.context.itemId;
-  $w('#dataset2').setFieldValue("userId", userId);
-  $w('#dataset2').setFieldValue("buttonId", buttonId);
+  let toInsert = {
+    "userId":         userId,
+    "buttonId":       buttonId,
+    "lastPressedUp":  undefined,
+  };
+
+  /*
+  wixData.insert('RatedUsers', toInsert)
+    .then( (results) => {
+      let item = results;
+    });
+  */
+
+  let lastPressedUp; 
+
+  wixData.query('RatedUsers')
+    .eq("userId", userId)
+    .eq("buttonId", buttonId)
+    .find()
+    .then( (recordedDate) => {
+      lastPressedUp = recordedDate;
+    })
+  
+  if ((lastPressedUp === undefined) || (lastPressedUp.getTime()) < (lastPressedUp.getTime() + 1209600000)) {
+    lastPressedUp = currDate;
+
+    let toSave = {
+      "userId":           userId,
+      "buttonId":         buttonId,
+      "lastPressedUp":    lastPressedUp,
+    }
+
+    wixData.save('RatedUsers', toSave)
+      .then( (results) => {
+        let item = results;
+      })
+
+    $w('#upvote').disable();
+    $w('#downvote').disable();
+
+  } else {
+    $w('#upvote').disable();
+    $w('#downvote').disable();
+  }
 }
 
 export function downvote_click(event, $w) {
@@ -112,12 +142,54 @@ export function downvote_click(event, $w) {
   $w('#dataset1').setFieldValue("score", newValue);
   $w('#dataset1').save();
   $w('#dataset1').refresh();
-  let currTimeDown = itemData.lastPressedDown.getTime();
-  if (currTimeDown < (currTimeDown + 1209600000)){
+  
+  let currDate = new Date();
+
+  let userId = wixUsers.currentUser.id;
+  let buttonId = event.context.itemId;
+  let toInsert = {
+    "userId":         userId,
+    "buttonId":       buttonId,
+    "lastPressedDown":  undefined,
+  };
+
+  /*
+  wixData.insert('RatedUsers', toInsert)
+    .then( (results) => {
+      let item = results;
+    });
+  */
+
+  let lastPressedDown; 
+
+  wixData.query('RatedUsers')
+    .eq("userId", userId)
+    .eq("buttonId", buttonId)
+    .find()
+    .then( (recordedDate) => {
+      lastPressedDown = recordedDate;
+    })
+  
+  if ((lastPressedDown === undefined) || (lastPressedDown.getTime()) < (lastPressedDown.getTime() + 1209600000)) {
+    lastPressedDown = currDate;
+
+    let toSave = {
+      "userId":           userId,
+      "buttonId":         buttonId,
+      "lastPressedUp":    lastPressedDown,
+    }
+
+    wixData.save('RatedUsers', toSave)
+      .then( (results) => {
+        let item = results;
+      })
+
     $w('#upvote').disable();
     $w('#downvote').disable();
+
   } else {
-    $w('#downvote').enable();
+    $w('#upvote').disable();
     $w('#downvote').disable();
   }
+
 }
