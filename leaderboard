@@ -7,16 +7,18 @@ $w.onReady(() => {
   // Check if user is logged in
   if (wixUsers.currentUser.loggedIn) {
     $w('#ifNotLoggedIn').hide();
-    $w('#text8').hide();
+    $w('#text8').show();
     }
     else {
       $w('#ifNotLoggedIn').show();
-      $w('#text8').show();
+      $w('#text8').hide();
+      $w('#upvote').disable()
+      $w('#downvote').disable()
     }
 
   $w('#repeater1').forEachItem( ($w, itemData) => {
     let userId = wixUsers.currentUser.id;
-    let upButtonId = $w("#upvote").parent.uniqueId;
+    let upButtonId = $w("#upvote").uniqueId;
     console.log("upButtonId:" + upButtonId);
 
     let upButtonDate; 
